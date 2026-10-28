@@ -1,11 +1,13 @@
 import argparse
 import html
 import json
+import os
 import re
 import sys
 import threading
 import urllib.parse
 import urllib.request
+import webbrowser
 from pathlib import Path
 
 
@@ -365,7 +367,7 @@ def gui_baslat():
     from tkinter import filedialog, messagebox, scrolledtext, ttk
 
     root = tk.Tk()
-    root.title("YouTube Transkript İndirici")
+    root.title("YouTube Transkript İndirici Dr. Soner ASLAN")
     root.geometry("760x560")
     root.minsize(680, 500)
 
@@ -382,6 +384,32 @@ def gui_baslat():
     def log_yaz(mesaj):
         log.configure(state="normal")
         log.insert("end", mesaj + "\n")
+        log.see("end")
+        log.configure(state="disabled")
+
+    def dosya_ac(event, dosya):
+        yol = Path(dosya)
+        if not yol.exists():
+            messagebox.showerror("Dosya bulunamadı", f"Dosya artık mevcut değil:\n{yol}")
+            return
+        try:
+            if hasattr(os, "startfile"):
+                os.startfile(str(yol))
+            else:
+                webbrowser.open(yol.resolve().as_uri())
+        except OSError as exc:
+            messagebox.showerror("Dosya açılamadı", f"Dosya açılırken hata oluştu:\n{exc}")
+
+    def log_dosya(dosya):
+        yol = Path(dosya)
+        etiket = f"dosya_{log.index('end-1c').replace('.', '_')}"
+        log.configure(state="normal")
+        log.insert("end", "    Dosya: ")
+        log.insert("end", str(yol), (etiket,))
+        log.insert("end", "\n")
+        log.tag_bind(etiket, "<Button-1>", lambda event, hedef=yol: dosya_ac(event, hedef))
+        log.tag_bind(etiket, "<Enter>", lambda event: log.configure(cursor="hand2"))
+        log.tag_bind(etiket, "<Leave>", lambda event: log.configure(cursor=""))
         log.see("end")
         log.configure(state="disabled")
 
@@ -433,7 +461,7 @@ def gui_baslat():
                         dil_adi = LANGUAGE_NAMES.get(sonuc["dil"], sonuc["dil"])
                         log_yaz(f"[+] {dil_adi}: {sonuc['kelime']} kelime")
                         for dosya in sonuc["dosyalar"]:
-                            log_yaz(f"    Dosya: {dosya}")
+                            log_dosya(dosya)
                         log_yaz(f"    Kaynak: {sonuc['kaynak']}")
                     for hata in hatalar:
                         dil_adi = LANGUAGE_NAMES.get(hata["dil"], hata["dil"])
